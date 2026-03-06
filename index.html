@@ -3,45 +3,105 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>我的网站 - 已开通</title>
+    <title>密码验证页面 | PC591</title>
     <style>
-        /* 全局样式重置，适配不同浏览器 */
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-        }
-
-        /* 页面主体样式 */
-        body {
             font-family: "Microsoft YaHei", Arial, sans-serif;
-            background-color: #f8f9fa;
-            color: #333;
-            min-height: 100vh; /* 确保页面占满屏幕高度 */
-            padding-bottom: 60px; /* 给底部备案提示留空间 */
         }
 
-        /* 核心内容区域 */
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 80px 20px;
+        body {
+            background-color: #f5f7fa;
+            min-height: 100vh;
+            padding-bottom: 60px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* 密码验证容器 */
+        .password-container {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 450px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .password-container h2 {
+            color: #2c3e50;
+            margin-bottom: 25px;
+            font-size: 1.8rem;
+        }
+
+        .password-input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 1rem;
+            margin-bottom: 15px;
+            outline: none;
+            transition: border 0.3s;
+        }
+
+        .password-input:focus {
+            border-color: #3498db;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 12px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .submit-btn:hover {
+            background-color: #2980b9;
+        }
+
+        .error-tip {
+            color: #e74c3c;
+            margin-top: 10px;
+            font-size: 0.9rem;
+            display: none;
+        }
+
+        /* 自定义文字区域（验证后显示） */
+        .content-container {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 600px;
+            display: none;
             text-align: center;
         }
 
-        .container h1 {
-            font-size: 2.5rem;
+        .content-container h3 {
             color: #2c3e50;
             margin-bottom: 20px;
         }
 
-        .container p {
-            font-size: 1.2rem;
+        .content-text {
             color: #666;
             line-height: 1.8;
+            font-size: 1.1rem;
         }
 
-        /* 底部备案提示栏 - 固定在底部 */
+        /* 底部备案提示 */
         .beian-footer {
             position: fixed;
             left: 0;
@@ -65,13 +125,19 @@
             text-decoration: underline;
         }
 
-        /* 适配手机端 */
+        /* 加载提示 */
+        .loading {
+            margin-top: 15px;
+            color: #3498db;
+            font-size: 0.9rem;
+            display: none;
+        }
+
+        /* 手机适配 */
         @media (max-width: 768px) {
-            .container h1 {
-                font-size: 2rem;
-            }
-            .container p {
-                font-size: 1rem;
+            .password-container, .content-container {
+                padding: 30px 20px;
+                margin: 0 15px;
             }
             .beian-footer {
                 font-size: 12px;
@@ -82,17 +148,90 @@
     </style>
 </head>
 <body>
-    <!-- 核心内容 -->
-    <div class="container">
-        <h1>🎉 我的网站已正式开通！</h1>
-        <p>感谢访问，本网站为个人展示用，功能持续完善中～</p>
-        <p style="margin-top: 10px;">访问地址：<strong>https://PC591.github.io</strong></p>
+    <!-- 密码验证区域 -->
+    <div class="password-container" id="passwordBox">
+        <h2>请输入访问密码</h2>
+        <input type="password" class="password-input" id="passwordInput" placeholder="请输入密码">
+        <button class="submit-btn" onclick="verifyPassword()">验证密码</button>
+        <div class="loading" id="loadingTip">验证中，请稍候...</div>
+        <div class="error-tip" id="errorTip">密码错误，请重新输入！</div>
     </div>
 
-    <!-- 底部海外服务器备案提示 -->
+    <!-- 自定义内容区域（验证后显示） -->
+    <div class="content-container" id="contentBox">
+        <h3>我的心情</h3>
+        <div class="content-text" id="contentText">
+            呜呜呜，买树梅派亏了。还好周日能去游乐场，但还要编程比赛
+        </div>
+    </div>
+
+    <!-- 底部海外服务器提示 -->
     <div class="beian-footer">
         本网站服务器部署于海外，依据《互联网信息服务管理办法》，无需进行工信部ICP备案 | 
         <a href="https://beian.miit.gov.cn/" target="_blank">工信部ICP备案查询官网</a>
     </div>
+
+    <script>
+        // 1040195678 的 SHA256 哈希值（前端加密验证，无明文）
+        const CORRECT_HASH = "e807f1fcf82d132f9bb018ca6738a19f346e284f0808513379168a0381855e86";
+
+        // SHA256 加密函数（核心：避免密码明文暴露）
+        async function sha256(str) {
+            const encoder = new TextEncoder();
+            const data = encoder.encode(str);
+            const hash = await crypto.subtle.digest('SHA-256', data);
+            // 转换为十六进制字符串
+            return Array.from(new Uint8Array(hash))
+                .map(b => b.toString(16).padStart(2, '0'))
+                .join('');
+        }
+
+        // 密码验证逻辑
+        async function verifyPassword() {
+            const inputVal = document.getElementById("passwordInput").value.trim();
+            const loadingTip = document.getElementById("loadingTip");
+            const errorTip = document.getElementById("errorTip");
+            const passwordBox = document.getElementById("passwordBox");
+            const contentBox = document.getElementById("contentBox");
+
+            // 空值判断
+            if (!inputVal) {
+                errorTip.textContent = "请输入密码后再验证！";
+                errorTip.style.display = "block";
+                return;
+            }
+
+            // 显示加载提示
+            loadingTip.style.display = "block";
+            errorTip.style.display = "none";
+
+            // 模拟延迟（体验更友好）
+            setTimeout(async () => {
+                // 对输入的密码进行 SHA256 加密
+                const inputHash = await sha256(inputVal);
+                
+                // 对比哈希值（永不暴露原始密码）
+                if (inputHash === CORRECT_HASH) {
+                    // 密码正确，显示内容区域（直接展示指定文字）
+                    passwordBox.style.display = "none";
+                    contentBox.style.display = "block";
+                } else {
+                    // 密码错误
+                    errorTip.textContent = "密码错误，请重新输入！";
+                    errorTip.style.display = "block";
+                }
+
+                // 隐藏加载提示
+                loadingTip.style.display = "none";
+            }, 800); // 800毫秒延迟，模拟验证过程
+        }
+
+        // 按回车触发验证
+        document.getElementById("passwordInput").addEventListener("keydown", function(e) {
+            if (e.key === "Enter") {
+                verifyPassword();
+            }
+        });
+    </script>
 </body>
 </html>
