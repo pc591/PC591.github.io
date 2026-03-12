@@ -19,9 +19,14 @@
         .mario-btn {padding:15px 40px;background:#e53e3e;color:white;border:none;border-radius:8px;font-size:20px;cursor:pointer;font-weight:bold;text-decoration:none;display:inline-block}
         .footer {position:fixed;left:0;bottom:0;width:100%;height:50px;line-height:50px;background:#e9ecef;text-align:center;font-size:14px;color:#666;border-top:1px solid #ddd}
         .footer a {color:#666;text-decoration:none}
+        #bg-audio {
+    display: none;
+}
+
     </style>
 </head>
 <body>
+    <audio id="bg-audio" src="npcf.mp3" loop autoplay muted playsinline></audio>
     <div class="pwd-container" id="pwdContainer">
         <div class="pwd-box">
             <h2>请输入访问密码</h2>
@@ -51,5 +56,21 @@
     <!-- 先引入原始JS（后续替换为混淆后的） -->
     <script src="anti-debug-obf.js"></script>
     <script src="core-obf.js"></script>
+    <script>
+    // 页面加载完成后尝试播放音频
+    window.onload = function() {
+        const audio = document.getElementById('bg-audio');
+        // 移除静音（浏览器要求必须有用户交互才能取消静音，这里通过模拟交互）
+        audio.muted = false;
+        // 强制播放（兼容不同浏览器）
+        audio.play().catch(function(err) {
+            // 若自动播放失败，点击页面任意位置后播放
+            document.addEventListener('click', function() {
+                audio.play();
+            }, { once: true });
+        });
+    };
+</script>
 </body>
+
 </html>
