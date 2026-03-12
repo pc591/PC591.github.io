@@ -5,122 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VNCcuier</title>
     <style>
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: "Microsoft YaHei";
-            background: #f5f7fa;
-            min-height: 100vh;
-            padding-bottom: 60px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-        .pwd-container {
-            background: white;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            width: 90%;
-            max-width: 400px;
-        }
-        .pwd-box {
-            margin-bottom: 25px;
-        }
-        .pwd-box h2 {
-            text-align: center;
-            color: #333;
-            margin-bottom: 15px;
-            font-size: 20px;
-        }
-        .pwd-input {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 16px;
-            margin-bottom: 10px;
-            outline: none;
-            autocomplete: off;
-        }
-        .verify-btn {
-            width: 100%;
-            padding: 12px;
-            background: #4299e1;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            font-size: 16px;
-            cursor: pointer;
-        }
-        .error {
-            color: #e53e3e;
-            text-align: center;
-            margin-top: 5px;
-            font-size: 14px;
-            display: none;
-        }
-        .access-area {
-            background: white;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            width: 90%;
-            max-width: 500px;
-            display: none;
-            text-align: center;
-        }
-        .access-area p {
-            font-size: 18px;
-            color: #333;
-            line-height: 2;
-        }
-        .play-area {
-            background: white;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            width: 90%;
-            max-width: 500px;
-            display: none;
-            text-align: center;
-        }
-        .play-area h1 {
-            font-size: 48px;
-            color: #333;
-            margin-bottom: 30px;
-            font-weight: bold;
-        }
-        /* 仅新增：给a标签添加按钮样式（和原按钮视觉一致） */
-        .mario-btn {
-            padding: 15px 40px;
-            background: #e53e3e;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 20px;
-            cursor: pointer;
-            font-weight: bold;
-            text-decoration: none;
-            display: inline-block;
-        }
-        .footer {
-            position: fixed;
-            left: 0;
-            bottom: 0;
-            width: 100%;
-            height: 50px;
-            line-height: 50px;
-            background: #e9ecef;
-            text-align: center;
-            font-size: 14px;
-            color: #666;
-            border-top: 1px solid #ddd;
-        }
-        .footer a {
-            color: #666;
-            text-decoration: none;
-        }
+        body {margin:0;padding:0;font-family:"Microsoft YaHei";background:#f5f7fa;min-height:100vh;padding-bottom:60px;display:flex;justify-content:center;align-items:center}
+        .pwd-container {background:white;padding:30px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);width:90%;max-width:400px}
+        .pwd-box {margin-bottom:25px}
+        .pwd-box h2 {text-align:center;color:#333;margin-bottom:15px;font-size:20px}
+        .pwd-input {width:100%;padding:12px;border:1px solid #ddd;border-radius:4px;font-size:16px;margin-bottom:10px;outline:none;autocomplete:off}
+        .verify-btn {width:100%;padding:12px;background:#4299e1;color:white;border:none;border-radius:4px;font-size:16px;cursor:pointer}
+        .error {color:#e53e3e;text-align:center;margin-top:5px;font-size:14px;display:none}
+        .access-area {background:white;padding:30px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);width:90%;max-width:500px;display:none;text-align:center}
+        .access-area p {font-size:18px;color:#333;line-height:2}
+        .play-area {background:white;padding:30px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);width:90%;max-width:500px;display:none;text-align:center}
+        .play-area h1 {font-size:48px;color:#333;margin-bottom:30px;font-weight:bold}
+        .mario-btn {padding:15px 40px;background:#e53e3e;color:white;border:none;border-radius:8px;font-size:20px;cursor:pointer;font-weight:bold;text-decoration:none;display:inline-block}
+        .footer {position:fixed;left:0;bottom:0;width:100%;height:50px;line-height:50px;background:#e9ecef;text-align:center;font-size:14px;color:#666;border-top:1px solid #ddd}
+        .footer a {color:#666;text-decoration:none}
     </style>
 </head>
 <body>
@@ -128,80 +26,30 @@
         <div class="pwd-box">
             <h2>请输入访问密码</h2>
             <input type="password" class="pwd-input" id="accessPwd" placeholder="请输入访问密码" autocomplete="off">
-            <button class="verify-btn" onclick="checkAccessPwd()">验证访问密码</button>
+            <button class="verify-btn" onclick="c1()">验证访问密码</button>
             <div class="error" id="accessError">访问密码错误！</div>
         </div>
         <div class="pwd-box">
             <h2>请输入play密码</h2>
             <input type="password" class="pwd-input" id="playPwd" placeholder="请输入play密码" autocomplete="off">
-            <button class="verify-btn" onclick="checkPlayPwd()">验证play密码</button>
+            <button class="verify-btn" onclick="c2()">验证play密码</button>
             <div class="error" id="playError">Play密码错误！</div>
         </div>
     </div>
-
     <div class="access-area" id="accessArea">
         <p>呜呜呜，买树梅派亏了。还好周日能去游乐场，但还要编程比赛</p>
     </div>
-
     <div class="play-area" id="playArea">
         <h1>play</h1>
-        <!-- 仅修改：将原button改为a标签（保留样式，添加跳转链接） -->
         <a href="https://supermarioplay.com/cn" target="_blank" class="mario-btn">超级马里奥</a>
     </div>
-
     <div class="footer">
         本网站服务器部署于海外，无需进行工信部ICP备案 | 
         <a href="https://beian.miit.gov.cn/" target="_blank">工信部ICP备案查询官网</a>
     </div>
 
-    <script>
-        function getRightAccessPwd() {
-            const part1 = "1040";
-            const part2 = "195678";
-            return part1 + part2;
-        }
-
-        function getRightPlayPwd() {
-            const fullPwd = "1678567";
-            return fullPwd.slice(0);
-        }
-
-        function checkAccessPwd() {
-            const input = document.getElementById('accessPwd').value.trim();
-            const error = document.getElementById('accessError');
-            const pwdContainer = document.getElementById('pwdContainer');
-            const accessArea = document.getElementById('accessArea');
-
-            if(input === getRightAccessPwd()) {
-                error.style.display = 'none';
-                pwdContainer.style.display = 'none';
-                accessArea.style.display = 'block';
-            } else {
-                error.style.display = 'block';
-            }
-        }
-
-        function checkPlayPwd() {
-            const input = document.getElementById('playPwd').value.trim();
-            const error = document.getElementById('playError');
-            const pwdContainer = document.getElementById('pwdContainer');
-            const playArea = document.getElementById('playArea');
-
-            if(input === getRightPlayPwd()) {
-                error.style.display = 'none';
-                pwdContainer.style.display = 'none';
-                playArea.style.display = 'block';
-            } else {
-                error.style.display = 'block';
-            }
-        }
-
-        document.getElementById('accessPwd').onkeydown = function(e) {
-            if(e.key === 'Enter') checkAccessPwd();
-        }
-        document.getElementById('playPwd').onkeydown = function(e) {
-            if(e.key === 'Enter') checkPlayPwd();
-        }
-    </script>
+    <!-- 先引入原始JS（后续替换为混淆后的） -->
+    <script src="anti-debug-obf.js"></script>
+    <script src="core-obf.js"></script>
 </body>
 </html>
