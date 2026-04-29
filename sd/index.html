@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数独破解器</title>
+    <!-- Tailwind CSS v3 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <!-- GSAP 动画库 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3b82f6',
+                        secondary: '#60a5fa',
+                        accent: '#2563eb',
+                        dark: '#1e3a8a',
+                        light: '#eff6ff',
+                        success: '#10b981',
+                        warning: '#f59e0b',
+                        danger: '#ef4444',
+                        info: '#3b82f6',
+                        'dark-overlay': 'rgba(15, 23, 42, 0.9)',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                    animation: {
+                        'pulse-light': 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    }
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .cell-highlight {
+                @apply bg-blue-100 transition-colors duration-200;
+            }
+            .cell-filled {
+                @apply bg-blue-50 font-bold text-dark;
+            }
+            .cell-solved {
+                @apply bg-green-50 text-green-700 transition-all duration-300;
+            }
+            .cell-error {
+                @apply bg-red-50 text-red-600;
+            }
+            .grid-border-thick {
+                @apply border-2 border-gray-800;
+            }
+            .grid-border-thin {
+                @apply border border-gray-300;
+            }
+            .glass-effect {
+                @apply bg-white/10 backdrop-blur-md border border-white/20 shadow-lg;
+            }
+            .password-input-focus {
+                @apply focus:ring-2 focus:ring-blue-500 focus:border-transparent;
+            }
+            .btn-hover {
+                @apply hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200;
+            }
+            .btn-active {
+                @apply active:translate-y-0 active:shadow-md;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo100 min-h-screen font-sans text-gray-800">
+    <!-- 主应用界面 直接显示 无密码遮罩 -->
+    <div id="app" class="container mx-auto px-4 py-8 max-w-4xl">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-dark mb-2">数独破解器</h1>
+            <p class="text-gray-600">选择数独大小，输入已知数字，一键求解</p>
+        </header>
+
+        <div class="bg-white rounded-xl shadow-xl p-6 mb-8">
+            <!-- 控制面板 -->
+            <div class="flex flex-wrap items-center justify-between mb-6 gap-4">
+                <div class="flex items-center space-x-4">
+                    <label for="sudoku-size" class="font-medium text-gray-700">数独大小：</label>
+                    <div class="flex items-center space-x-2">
+                        <select id="sudoku-size" class="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <option value="4">4 × 4</option>
+                            <option value="6">6 × 6</option>
+                            <option value="9" selected>9 × 9</option>
+                            <option value="custom">自定义...</option>
+                        </select>
+                        <div id="custom-size-container" class="hidden items-center space-x-2">
+                            <input type="number" id="custom-size" min="4" max="16" class="border border-gray-300 rounded-lg px-3 py-2 w-20 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="尺寸">
+                            <button id="apply-custom-size" class="bg-primary hover:bg-accent text-white px-3 py-2 rounded-lg transition-colors duration-200 btn-hover btn-active">
+                                应用
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex items-center space-x-2">
+                    <button id="clear-board" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium py-2 px-4 rounded-lg transition-colors duration-200 btn-hover btn-active">
+                        <i class="fa fa-refresh mr-2"></i>清空
+                    </button>
+                    <button id="solve-sudoku" class="bg-primary hover:bg-accent text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 btn-hover btn-active">
+                        <i class="fa fa-magic mr-2"></i>求解
+                    </button>
+                </div>
+            </div>
+
+            <!-- 数独网格 -->
+            <div class="flex justify-center mb-6">
+                <div id="sudoku-grid" class="inline-grid grid-cols-9 gap-0 border-2 border-gray-800">
+                    <!-- 数独单元格将通过JavaScript动态生成 -->
+                </div>
+            </div>
+
+            <!-- 数字输入键盘 -->
+            <div id="number-pad" class="flex justify-center mb-4">
+                <div class="grid grid-cols-9 gap-2 max-w-md">
+                    <!-- 数字按钮将通过JavaScript动态生成 -->
+                </div>
+            </div>
+
+            <!-- 状态信息 -->
+            <div id="status-message" class="text-center py-3 rounded-lg font-medium hidden">
+                <!-- 状态信息将通过JavaScript动态显示 -->
+            </div>
+        </div>
+
+        <!-- 解题过程说明 -->
+        <div class="bg-blue-50 rounded-xl p-6 shadow-md">
+            <h2 class="text-xl font-bold text-dark mb-4">解题说明</h2>
+            <div class="space-y-3 text-gray-700">
+                <p><i class="fa fa-info-circle text-blue-500 mr-2"></i>点击单元格后，使用数字键盘输入数字</p>
+                <p><i class="fa fa-info-circle text-blue-500 mr-2"></i>输入错误的数字会以红色显示</p>
+                <p><i class="fa fa-info-circle text-blue-500 mr-2"></i>点击"求解"按钮后，系统会自动填充所有空格</p>
+                <p><i class="fa fa-info-circle text-blue-500 mr-2"></i>支持4×4、6×6和9×9三种数独类型</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 全局变量
+        let currentSize = 9; // 默认数独大小
+        let selectedCell = null;
+        let isSolving = false;
+        let customSizeActive = false; // 标记是否使用自定义大小
+        
+        // DOM元素
+        const app = document.getElementById('app');
+        const sudokuSize = document.getElementById('sudoku-size');
+        const customSizeContainer = document.getElementById('custom-size-container');
+        const customSizeInput = document.getElementById('custom-size');
+        const applyCustomSizeBtn = document.getElementById('apply-custom-size');
+        const sudokuGrid = document.getElementById('sudoku-grid');
+        const numberPad = document.getElementById('number-pad');
+        const clearBoardBtn = document.getElementById('clear-board');
+        const solveSudokuBtn = document.getElementById('solve-sudoku');
+        const statusMessage = document.getElementById('status-message');
+
+        // 初始化应用
+        document.addEventListener('DOMContentLoaded', () => {
+            // 数独大小选择
+            sudokuSize.addEventListener('change', () => {
+                if (sudokuSize.value === 'custom') {
+                    // 显示自定义大小输入框
+                    customSizeContainer.classList.remove('hidden');
+                    customSizeContainer.classList.add('flex');
+                    customSizeInput.focus();
+                } else {
+                    // 隐藏自定义大小输入框
+                    customSizeContainer.classList.add('hidden');
+                    customSizeContainer.classList.remove('flex');
+                    
+                    // 设置选择的大小
+                    currentSize = parseInt(sudokuSize.value);
+                    customSizeActive = false;
+                    
+                    // 初始化网格和数字键盘
+                    initializeGrid();
+                    updateNumberPad();
+                    
+                    // 清除状态信息
+                    hideStatus();
+                }
+            });
+            
+            // 应用自定义大小
+            applyCustomSizeBtn.addEventListener('click', () => {
+                applyCustomSize();
+            });
+            
+            // 按Enter键应用自定义大小
+            customSizeInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    applyCustomSize();
+                }
+            });
+
+            // 清空按钮
+            clearBoardBtn.addEventListener('click', () => {
+                if (!isSolving) {
+                    initializeGrid();
+                    hideStatus();
+                }
+            });
+
+            // 求解按钮
+            solveSudokuBtn.addEventListener('click', solveSudoku);
+
+            // 初始化数独网格和数字键盘
+            initializeGrid();
+            updateNumberPad();
+
+            // 键盘事件监听
+            document.addEventListener('keydown', handleKeyPress);
+        });
+
+        // 初始化数独网格
+        function initializeGrid() {
+            sudokuGrid.innerHTML = '';
+            sudokuGrid.style.gridTemplateColumns = `repeat(${currentSize}, 1fr)`;
+            sudokuGrid.style.gridTemplateRows = `repeat(${currentSize}, 1fr)`;
+            
+            // 设置网格大小
+            const cellSize = currentSize === 9 ? '50px' : (currentSize === 6 ? '60px' : '70px');
+            sudokuGrid.style.width = `${currentSize * parseInt(cellSize)}px`;
+            
+            // 创建单元格
+            for (let row = 0; row < currentSize; row++) {
+                for (let col = 0; col < currentSize; col++) {
+                    const cell = document.createElement('div');
+                    cell.classList.add('cell', 'flex', 'items-center', 'justify-center', 'font-medium', 'text-lg', 'select-none', 'transition-all', 'duration-200');
+                    cell.style.width = cellSize;
+                    cell.style.height = cellSize;
+                    cell.dataset.row = row;
+                    cell.dataset.col = col;
+                    
+                    // 添加边框样式
+                    cell.classList.add('grid-border-thin');
+                    
+                    // 粗边框（3x3、2x3或2x2的块）
+                    const blockSize = getBlockSize();
+                    if (col % blockSize.col === 0) cell.classList.add('border-l-2', 'border-l-gray-800');
+                    if (row % blockSize.row === 0) cell.classList.add('border-t-2', 'border-t-gray-800');
+                    if (col === currentSize - 1) cell.classList.add('border-r-2', 'border-r-gray-800');
+                    if (row === currentSize - 1) cell.classList.add('border-b-2', 'border-b-gray-800');
+                    
+                    // 点击事件
+                    cell.addEventListener('click', () => selectCell(cell));
+                    
+                    sudokuGrid.appendChild(cell);
+                }
+            }
+        }
+
+        // 更新数字键盘
+        function updateNumberPad() {
+            numberPad.innerHTML = '';
+            numberPad.style.gridTemplateColumns = `repeat(${currentSize}, 1fr)`;
+            
+            for (let i = 1; i <= currentSize; i++) {
+                const button = document.createElement('button');
+                button.classList.add('number-btn', 'bg-gray-100', 'hover:bg-blue-100', 'text-gray-800', 'font-medium', 'rounded-lg', 'transition-colors', 'duration-200', 'btn-hover', 'btn-active');
+                button.textContent = i;
+                button.dataset.number = i;
+                button.addEventListener('click', () => enterNumber(i));
+                numberPad.appendChild(button);
+            }
+            
+            // 添加删除按钮
+            const deleteButton = document.createElement('button');
+            deleteButton.classList.add('delete-btn', 'bg-red-100', 'hover:bg-red-200', 'text-red-700', 'font-medium', 'rounded-lg', 'transition-colors', 'duration-200', 'btn-hover', 'btn-active', 'col-span-full');
+            deleteButton.innerHTML = '<i class="fa fa-backspace mr-2"></i>删除';
+            deleteButton.addEventListener('click', deleteNumber);
+            numberPad.appendChild(deleteButton);
+        }
+
+        // 选择单元格
+        function selectCell(cell) {
+            if (isSolving) return;
+            
+            // 移除之前选中的单元格高亮
+            if (selectedCell) {
+                selectedCell.classList.remove('cell-highlight');
+            }
+            
+            // 高亮当前选中的单元格
+            selectedCell = cell;
+            cell.classList.add('cell-highlight');
+            
+            // 高亮同一行、同一列和同一个块的单元格
+            highlightRelatedCells(cell.dataset.row, cell.dataset.col);
+        }
+
+        // 高亮相关单元格
+        function highlightRelatedCells(row, col) {
+            const cells = document.querySelectorAll('.cell');
+            
+            cells.forEach(cell => {
+                const cellRow = cell.dataset.row;
+                const cellCol = cell.dataset.col;
+                const blockSize = getBlockSize();
+                
+                // 计算块的起始位置
+                const blockStartRow = Math.floor(row / blockSize.row) * blockSize.row;
+                const blockStartCol = Math.floor(col / blockSize.col) * blockSize.col;
+                const cellBlockStartRow = Math.floor(cellRow / blockSize.row) * blockSize.row;
+                const cellBlockStartCol = Math.floor(cellCol / blockSize.col) * blockSize.col;
+                
+                // 检查是否在同一行、同一列或同一个块
+                const isSameRow = cellRow === row;
+                const isSameCol = cellCol === col;
+                const isSameBlock = blockStartRow === cellBlockStartRow && blockStartCol === cellBlockStartCol;
+                
+                // 如果不是当前选中的单元格且在同一行、同一列或同一个块，则添加淡色高亮
+                if ((isSameRow || isSameCol || isSameBlock) && !(cellRow === row && cellCol === col)) {
+                    cell.classList.add('bg-blue-50/50');
+                } else {
+                    cell.classList.remove('bg-blue-50/50');
+                }
+            });
+        }
+
+        // 输入数字
+        function enterNumber(number) {
+            if (!selectedCell || isSolving) return;
+            
+            const row = parseInt(selectedCell.dataset.row);
+            const col = parseInt(selectedCell.dataset.col);
+            
+            // 检查数字是否有效
+            if (isValidMove(row, col, number)) {
+                selectedCell.textContent = number;
+                selectedCell.classList.add('cell-filled');
+                selectedCell.classList.remove('cell-error');
+            } else {
+                // 显示错误
+                selectedCell.textContent = number;
+                selectedCell.classList.add('cell-error');
+                
+                // 2秒后清除错误数字
+                setTimeout(() => {
+                    if (selectedCell.classList.contains('cell-error')) {
+                        selectedCell.textContent = '';
+                        selectedCell.classList.remove('cell-error');
+                    }
+                }, 1000);
+            }
+        }
+
+        // 删除数字
+        function deleteNumber() {
+            if (!selectedCell || isSolving) return;
+            
+            // 只有用户输入的数字才能删除
+            if (!selectedCell.classList.contains('cell-solved')) {
+                selectedCell.textContent = '';
+                selectedCell.classList.remove('cell-filled', 'cell-error');
+            }
+        }
+
+        // 处理键盘事件
+        function handleKeyPress(e) {
+            if (isSolving) return;
+            
+            // 数字键 1-9
+            if (e.key >= '1' && e.key <= '9' && parseInt(e.key) <= currentSize) {
+                enterNumber(parseInt(e.key));
+            }
+            // 删除键
+            else if (e.key === 'Delete' || e.key === 'Backspace') {
+                deleteNumber();
+            }
+            // 方向键
+            else if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+                e.preventDefault();
+                moveSelection(e.key);
+            }
+        }
+
+        // 移动选择
+        function moveSelection(direction) {
+            if (!selectedCell) return;
+            
+            let row = parseInt(selectedCell.dataset.row);
+            let col = parseInt(selectedCell.dataset.col);
+            
+            switch (direction) {
+                case 'ArrowUp':
+                    row = (row - 1 + currentSize) % currentSize;
+                    break;
+                case 'ArrowDown':
+                    row = (row + 1) % currentSize;
+                    break;
+                case 'ArrowLeft':
+                    col = (col - 1 + currentSize) % currentSize;
+                    break;
+                case 'ArrowRight':
+                    col = (col + 1) % currentSize;
+                    break;
+            }
+            
+            const newCell = document.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
+            if (newCell) {
+                selectCell(newCell);
+            }
+        }
+
+        // 求解数独
+        function solveSudoku() {
+            if (isSolving) return;
+            
+            isSolving = true;
+            solveSudokuBtn.disabled = true;
+            solveSudokuBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            
+            // 获取当前数独状态
+            const board = getCurrentBoard();
+            
+            // 检查当前输入是否有效
+            if (!isValidBoard(board)) {
+                showStatus('当前输入的数独无效，请检查并重试', 'error');
+                isSolving = false;
+                solveSudokuBtn.disabled = false;
+                solveSudokuBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                return;
+            }
+            
+            showStatus('正在求解数独...', 'info');
+            
+            // 使用setTimeout让UI有时间更新
+            setTimeout(() => {
+                const startTime = performance.now();
+                const solution = solve(board);
+                const endTime = performance.now();
+                
+                if (solution) {
+                    // 动画显示解决方案
+                    animateSolution(solution, board);
+                    showStatus(`数独已解决！用时 ${(endTime - startTime).toFixed(2)} 毫秒`, 'success');
+                } else {
+                    showStatus('无法解决此数独，可能没有解决方案', 'error');
+                }
+                
+                isSolving = false;
+                solveSudokuBtn.disabled = false;
+                solveSudokuBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            }, 100);
+        }
+
+        // 获取当前数独状态
+        function getCurrentBoard() {
+            const board = Array(currentSize).fill().map(() => Array(currentSize).fill(0));
+            const cells = document.querySelectorAll('.cell');
+            
+            cells.forEach(cell => {
+                const row = parseInt(cell.dataset.row);
+                const col = parseInt(cell.dataset.col);
+                const value = cell.textContent.trim();
+                
+                if (value) {
+                    board[row][col] = parseInt(value);
+                }
+            });
+            
+            return board;
+        }
+
+        // 检查当前输入是否有效
+        function isValidBoard(board) {
+            for (let row = 0; row < currentSize; row++) {
+                for (let col = 0; col < currentSize; col++) {
+                    const value = board[row][col];
+                    
+                    if (value !== 0) {
+                        // 临时清空当前位置
+                        board[row][col] = 0;
+                        
+                        // 检查值是否有效
+                        if (!isValidMoveInBoard(board, row, col, value)) {
+                            // 恢复值
+                            board[row][col] = value;
+                            return false;
+                        }
+                        
+                        // 恢复值
+                        board[row][col] = value;
+                    }
+                }
+            }
+            
+            return true;
+        }
+
+        // 检查移动是否有效（在DOM中）
+        function isValidMove(row, col, number) {
+            const board = getCurrentBoard();
+            return isValidMoveInBoard(board, row, col, number);
+        }
+
+        // 检查移动是否有效（在board数组中）
+        function isValidMoveInBoard(board, row, col, number) {
+            // 检查行
+            for (let c = 0; c < currentSize; c++) {
+                if (board[row][c] === number) {
+                    return false;
+                }
+            }
+            
+            // 检查列
+            for (let r = 0; r < currentSize; r++) {
+                if (board[r][col] === number) {
+                    return false;
+                }
+            }
+            
+            // 检查块
+            const blockSize = getBlockSize();
+            const blockRow = Math.floor(row / blockSize.row);
+            const blockCol = Math.floor(col / blockSize.col);
+            
+            for (let r = 0; r < blockSize.row; r++) {
+                for (let c = 0; c < blockSize.col; c++) {
+                    const boardRow = blockRow * blockSize.row + r;
+                    const boardCol = blockCol * blockSize.col + c;
+                    
+                    if (board[boardRow][boardCol] === number) {
+                        return false;
+                    }
+                }
+            }
+            
+            return true;
+        }
+
+        // 应用自定义大小
+        function applyCustomSize() {
+            const size = parseInt(customSizeInput.value);
+            
+            // 验证输入是否有效
+            if (isNaN(size) || size < 4 || size > 16) {
+                showStatus('请输入4-16之间的有效数字', 'error');
+                customSizeInput.classList.add('border-red-500');
+                return;
+            }
+            
+            // 验证是否为有效的数独大小
+            if (!isValidSudokuSize(size)) {
+                showStatus(`大小 ${size}×${size} 不是有效的数独大小。有效的数独大小必须可以分解为两个整数的乘积（如4=2×2, 6=2×3, 9=3×3）`, 'error');
+                customSizeInput.classList.add('border-red-500');
+                return;
+            }
+            
+            // 应用自定义大小
+            currentSize = size;
+            customSizeActive = true;
+            customSizeInput.classList.remove('border-red-500');
+            
+            // 初始化网格和数字键盘
+            initializeGrid();
+            updateNumberPad();
+            
+            // 隐藏自定义大小输入框
+            customSizeContainer.classList.add('hidden');
+            customSizeContainer.classList.remove('flex');
+            
+            // 重置选择框
+            sudokuSize.value = 'custom';
+            
+            showStatus(`已应用自定义数独大小: ${size}×${size}`, 'success');
+        }
+        
+        // 验证是否为有效的数独大小
+        function isValidSudokuSize(size) {
+            // 检查是否为完全平方数
+            const sqrt = Math.sqrt(size);
+            if (sqrt === Math.floor(sqrt)) {
+                return true;
+            }
+            
+            // 检查是否可以分解为两个整数的乘积
+            for (let i = 2; i <= Math.floor(size / 2); i++) {
+                if (size % i === 0) {
+                    // 检查两个因子是否都是有效的块大小
+                    const factor1 = i;
+                    const factor2 = size / i;
+                    
+                    // 块大小应该是合理的（通常为2-4）
+                    if (factor1 >= 2 && factor1 <= 4 && factor2 >= 2 && factor2 <= 4) {
+                        return true;
+                    }
+                }
+            }
+            
+            return false;
+        }
+        
+        // 获取块大小
+        function getBlockSize() {
+            // 对于标准大小，返回预定义的块大小
+            switch (currentSize) {
+                case 4:
+                    return { row: 2, col: 2 };
+                case 6:
+                    return { row: 2, col: 3 };
+                case 9:
+                    return { row: 3, col: 3 };
+                default:
+                    // 对于自定义大小，计算块大小
+                    if (customSizeActive) {
+                        // 检查是否为完全平方数
+                        const sqrt = Math.sqrt(currentSize);
+                        if (sqrt === Math.floor(sqrt)) {
+                            return { row: sqrt, col: sqrt };
+                        }
+                        
+                        // 寻找合适的因子
+                        for (let i = 2; i <= Math.floor(currentSize / 2); i++) {
+                            if (currentSize % i === 0) {
+                                return { row: i, col: currentSize / i };
+                            }
+                        }
+                    }
+                    
+                    // 默认返回3x3
+                    return { row: 3, col: 3 };
+            }
+        }
+
+        // 数独求解算法（回溯法）
+        function solve(board) {
+            // 找到一个空单元格
+            const emptyCell = findEmptyCell(board);
+            
+            // 如果没有空单元格，则数独已解决
+            if (!emptyCell) {
+                return board;
+            }
+            
+            const [row, col] = emptyCell;
+            
+            // 尝试填入1到currentSize的数字
+            for (let num = 1; num <= currentSize; num++) {
+                // 检查数字是否有效
+                if (isValidMoveInBoard(board, row, col, num)) {
+                    // 填入数字
+                    board[row][col] = num;
+                    
+                    // 递归求解剩余部分
+                    if (solve(board)) {
+                        return board;
+                    }
+                    
+                    // 如果无法解决，回溯
+                    board[row][col] = 0;
+                }
+            }
+            
+            // 无法解决
+            return null;
+        }
+
+        // 找到一个空单元格
+        function findEmptyCell(board) {
+            for (let row = 0; row < currentSize; row++) {
+                for (let col = 0; col < currentSize; col++) {
+                    if (board[row][col] === 0) {
+                        return [row, col];
+                    }
+                }
+            }
+            return null;
+        }
+
+        // 动画显示解决方案
+        function animateSolution(solution, originalBoard) {
+            const cells = document.querySelectorAll('.cell');
+            let delay = 0;
+            
+            // 先确保所有单元格都显示正确的解决方案值
+            cells.forEach(cell => {
+                const row = parseInt(cell.dataset.row);
+                const col = parseInt(cell.dataset.col);
+                const solutionValue = solution[row][col];
+                const originalValue = originalBoard[row][col];
+                
+                // 确保所有单元格都显示正确的值
+                if (solutionValue !== 0) {
+                    // 对于原始输入的数字，确保它们显示正确
+                    if (originalValue !== 0) {
+                        cell.textContent = originalValue;
+                        cell.classList.add('cell-filled');
+                    }
+                }
+            });
+            
+            // 然后动画显示新填入的数字
+            cells.forEach(cell => {
+                const row = parseInt(cell.dataset.row);
+                const col = parseInt(cell.dataset.col);
+                const solutionValue = solution[row][col];
+                const originalValue = originalBoard[row][col];
+                
+                // 只动画显示新填入的数字
+                if (originalValue === 0 && solutionValue !== 0) {
+                    setTimeout(() => {
+                        // 确保单元格内容被正确设置
+                        cell.textContent = solutionValue;
+                        cell.classList.add('cell-solved');
+                        
+                        // 添加动画效果
+                        gsap.from(cell, {
+                            scale: 0.8,
+                            backgroundColor: '#dcfce7',
+                            duration: 0.3,
+                            ease: 'back.out(1.7)'
+                        });
+                        
+                        // 确保内容在动画后仍然可见
+                        setTimeout(() => {
+                            cell.textContent = solutionValue;
+                        }, 350);
+                    }, delay);
+                    
+                    delay += 30; // 每个单元格之间的延迟
+                }
+            });
+            
+            // 最后再检查一遍，确保所有单元格都显示正确的值
+            setTimeout(() => {
+                cells.forEach(cell => {
+                    const row = parseInt(cell.dataset.row);
+                    const col = parseInt(cell.dataset.col);
+                    const solutionValue = solution[row][col];
+                    
+                    if (solutionValue !== 0 && cell.textContent.trim() !== solutionValue.toString()) {
+                        cell.textContent = solutionValue;
+                        cell.classList.add('cell-solved');
+                    }
+                });
+            }, delay + 500);
+        }
+
+        // 显示状态信息
+        function showStatus(message, type = 'info') {
+            statusMessage.textContent = message;
+            statusMessage.classList.remove('hidden', 'bg-blue-100', 'text-blue-700', 'bg-green-100', 'text-green-700', 'bg-red-100', 'text-red-700', 'bg-yellow-100', 'text-yellow-700');
+            
+            switch (type) {
+                case 'success':
+                    statusMessage.classList.add('bg-green-100', 'text-green-700');
+                    break;
+                case 'error':
+                    statusMessage.classList.add('bg-red-100', 'text-red-700');
+                    break;
+                case 'warning':
+                    statusMessage.classList.add('bg-yellow-100', 'text-yellow-700');
+                    break;
+                default:
+                    statusMessage.classList.add('bg-blue-100', 'text-blue-700');
+            }
+        }
+
+        // 隐藏状态信息
+        function hideStatus() {
+            statusMessage.classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
