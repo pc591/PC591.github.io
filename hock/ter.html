@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>带Cookie存档+help -a跳转网页</title>
+<style>
+* {margin:0;padding:0;box-sizing:border-box;}
+body {
+  background: #000;
+  color: #0f0;
+  font-family: Consolas,Courier New,monospace;
+  font-size: 15px;
+  padding: 20px;
+  line-height: 1.7;
+}
+#box {
+  white-space: pre-wrap;
+  margin-bottom: 15px;
+}
+.input-row {
+  display: flex;
+  align-items: center;
+}
+.flag {
+  color: #0f0;
+  margin-right: 10px;
+}
+#cmd {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #0f0;
+  font-family: inherit;
+  font-size: inherit;
+  flex: 1;
+}
+</style>
+</head>
+<body>
+<div id="box"></div>
+<div class="input-row">
+  <span class="flag">root@hack:~#</span>
+  <input type="text" id="cmd" autofocus autocomplete="off">
+</div>
+
+<script>
+const box = document.getElementById('box');
+const input = document.getElementById('cmd');
+
+// ========== Cookie 工具 ==========
+function setCookie(name,value,days=365){
+  let d = new Date();
+  d.setTime(d.getTime() + (days*24*60*60*1000));
+  document.cookie = name + "=" + value + ";expires="+d.toUTCString()+";path=/";
+}
+function getCookie(name){
+  let arr = document.cookie.split('; ');
+  for(let i=0;i<arr.length;i++){
+    let kv = arr[i].split('=');
+    if(kv[0] === name) return kv[1];
+  }
+  return "";
+}
+function clearAllCookie(){
+  document.cookie.split("; ").forEach(item=>{
+    let name = item.split("=")[0];
+    setCookie(name,"",-1);
+  });
+}
+
+// ========== 随机信息 ==========
+function randomInt(min,max){
+  return Math.floor(Math.random()*(max-min+1))+min;
+}
+const randIP = `192.168.${randomInt(1,8)}.${randomInt(10,220)}`;
+const portSSH = randomInt(21,28);
+const portWeb = randomInt(80,95);
+const portDB = randomInt(3300,3315);
+const userArr = ["admin","root","system","webuser","test","master"];
+const randUser = userArr[randomInt(0,userArr.length-1)];
+const pwdArr = ["Admin@2026","root666","qwe123","server888","Pass@000"];
+const randPwd = pwdArr[randomInt(0,pwdArr.length-1)];
+
+// ========== 进度存档 ==========
+let scanDone = getCookie("scanDone") === "1";
+let vulnFind = getCookie("vulnFind") === "1";
+let crackOk = getCookie("crackOk") === "1";
+let loginOk = getCookie("loginOk") === "1";
+let rootOk = getCookie("rootOk") === "1";
+let backdoorOk = getCookie("backdoorOk") === "1";
+
+function saveProgress(){
+  setCookie("scanDone",scanDone?"1":"0");
+  setCookie("vulnFind",vulnFind?"1":"0");
+  setCookie("crackOk",crackOk?"1":"0");
+  setCookie("loginOk",loginOk?"1":"0");
+  setCookie("rootOk",rootOk?"1":"0");
+  setCookie("backdoorOk",backdoorOk?"1":"0");
+  log("已保存关卡数据到本地Cookie");
+}
+
+// ========== Help 列表 ==========
+const helpMsg = `
+========== 终端帮助 HELP ==========
+sudo
+cd
+netview
+mkdir
+ssh
+exit
+clear
+mv
+vuln
+reboot
+shutdown
+ipinfo
+rm
+crack
+pwd
+ping
+dir
+backdoor
+cat
+nmap
+scan
+==================================
+提示：请自行摸索渗透步骤，按正确流程逐步突破
+`;
+
+function log(txt){
+  box.innerText += txt + "\n";
+  window.scrollTo(0, document.body.scrollHeight);
+}
+
+function start(){
+  log("正在启动渗透测试终端...");
+  log("加载端口库、漏洞库、爆破模块...");
+  log("连接虚拟靶场服务器成功");
+  let hasSave = getCookie("scanDone") !== "";
+  if(hasSave){
+    log("已自动加载上次渗透进度，继续游戏");
+  }else{
+    log("无本地存档，进入全新渗透任务");
+  }
+  log("=============================================");
+  log("系统提示：新手请先输入 help 查看所有可用命令");
+  log("=============================================\n");
+}
+
+// ========== 命令监听 ==========
+input.addEventListener('keydown',e=>{
+  if(e.key !== 'Enter') return;
+  let order = input.value.trim().toLowerCase();
+  log(`root@hack:~# ${order}`);
+  input.value = '';
+
+  // 新增：help -a 打开网页
+  if(order === "help -a"){
+    log("正在打开高级帮助页面...");
+    window.open("https://pc591.github.io/hock/date","_blank");
+    return;
+  }
+
+  // 隐藏清存档命令
+  if(order === "cookienotes"){
+    clearAllCookie();
+    scanDone = false;
+    vulnFind = false;
+    crackOk = false;
+    loginOk = false;
+    rootOk = false;
+    backdoorOk = false;
+    log("本地所有Cookie存档已清除，游戏进度已重置");
+    return;
+  }
+
+  if(order === 'help'){
+    log(helpMsg);
+    return;
+  }
+  if(order === 'clear'){
+    box.innerText = '';
+    return;
+  }
+
+  // 伪装假命令
+  const fakeCmd = ["cd","dir","mkdir","rm","mv","pwd","cat","exit","reboot"];
+  if(fakeCmd.includes(order)){
+    if(order === "cd") log("切换工作目录完成");
+    else if(order === "dir") log("列出当前目录文件列表");
+    else if(order === "mkdir") log("目录创建成功");
+    else if(order === "rm") log("文件已移除");
+    else if(order === "mv") log("文件移动完成");
+    else if(order === "pwd") log("/root/hack");
+    else if(order === "cat") log("读取系统配置文本完成");
+    else if(order === "exit") log("会话已退出，可继续输入命令");
+    else if(order === "reboot") log("目标主机重启指令已缓存");
+    return;
+  }
+
+  // 真实渗透命令
+  if(order === 'ping'){
+    log(`正在发送数据包探测目标主机...`);
+    log(`目标 ${randIP} 在线，网络延迟正常`);
+    return;
+  }
+
+  if(order === 'scan'){
+    if(scanDone){
+      log("端口扫描任务已完成，无需重复执行");
+      return;
+    }
+    log("正在全端口扫描 1-65535 网段...");
+    log(`开放端口：${portSSH}(SSH) ${portWeb}(Web) ${portDB}(Database)`);
+    scanDone = true;
+    saveProgress();
+    return;
+  }
+
+  if(order === 'nmap'){
+    if(!scanDone){
+      log("【错误】请先完成端口扫描，再进行漏洞探测");
+      return;
+    }
+    log("加载漏洞特征库，深度扫描中...");
+    log("检测到高危弱口令漏洞、后台未授权访问漏洞");
+    vulnFind = true;
+    saveProgress();
+    return;
+  }
+
+  if(order === 'ipinfo'){
+    log(`目标IP：${randIP}`);
+    log("归属：内网服务器节点 系统：Windows Server 2019");
+    return;
+  }
+
+  if(order === 'vuln'){
+    if(!vulnFind){
+      log("【错误】未扫描到可利用漏洞");
+      return;
+    }
+    log("调用漏洞利用载荷...");
+    log("漏洞注入成功，获取临时接口权限");
+    return;
+  }
+
+  if(order === 'crack'){
+    if(!vulnFind){
+      log("【错误】无可用爆破服务，请先扫描漏洞");
+      return;
+    }
+    log("加载字典进行暴力破解...");
+    log(`破解成功 账号：${randUser} 密码：${randPwd}`);
+    crackOk = true;
+    saveProgress();
+    return;
+  }
+
+  if(order === 'ssh'){
+    if(!crackOk){
+      log("【错误】未获取登录凭据，无法建立连接");
+      return;
+    }
+    log(`正在连接 ${randIP}:${portSSH} ...`);
+    log("身份验证通过，成功入侵目标服务器");
+    loginOk = true;
+    saveProgress();
+    return;
+  }
+
+  if(order === 'sudo'){
+    if(!loginOk){
+      log("【错误】请先登录目标主机");
+      return;
+    }
+    log("正在申请系统最高权限...");
+    log("提权成功，已获得ROOT管理员权限");
+    rootOk = true;
+    saveProgress();
+    return;
+  }
+
+  if(order === 'backdoor'){
+    if(!rootOk){
+      log("【错误】权限不足，无法部署后门程序");
+      return;
+    }
+    log("写入隐藏系统服务后门...");
+    log("后门部署完成，持久控制已生效");
+    backdoorOk = true;
+    saveProgress();
+    return;
+  }
+
+  if(order === 'netview'){
+    log("扫描内网存活设备...");
+    log("发现：网络摄像头、办公PC、NAS存储、打印机设备");
+    return;
+  }
+
+  if(order === 'shutdown'){
+    if(!backdoorOk){
+      log("【错误】未完全控制主机，无法执行关机指令");
+      return;
+    }
+    log("=============================================");
+    log("【警告】下发远程关机指令...");
+    log("指令执行成功，目标主机正在断电下线");
+    log(`靶机 ${randIP} 已关机，渗透任务全部完成`);
+    log("=============================================");
+    return;
+  }
+
+  log(`bash: ${order}: command not found`);
+});
+
+start();
+</script>
+</body>
+</html>
