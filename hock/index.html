@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<title>带Cookie存档+help -a跳转网页</title>
+<title>带Cookie自动存档 渗透终端</title>
 <style>
 * {margin:0;padding:0;box-sizing:border-box;}
 body {
@@ -47,7 +47,7 @@ body {
 const box = document.getElementById('box');
 const input = document.getElementById('cmd');
 
-// ========== Cookie 工具 ==========
+// ========== Cookie 工具函数 ==========
 function setCookie(name,value,days=365){
   let d = new Date();
   d.setTime(d.getTime() + (days*24*60*60*1000));
@@ -68,7 +68,7 @@ function clearAllCookie(){
   });
 }
 
-// ========== 随机信息 ==========
+// ========== 随机生成信息 ==========
 function randomInt(min,max){
   return Math.floor(Math.random()*(max-min+1))+min;
 }
@@ -76,12 +76,13 @@ const randIP = `192.168.${randomInt(1,8)}.${randomInt(10,220)}`;
 const portSSH = randomInt(21,28);
 const portWeb = randomInt(80,95);
 const portDB = randomInt(3300,3315);
+
 const userArr = ["admin","root","system","webuser","test","master"];
 const randUser = userArr[randomInt(0,userArr.length-1)];
 const pwdArr = ["Admin@2026","root666","qwe123","server888","Pass@000"];
 const randPwd = pwdArr[randomInt(0,pwdArr.length-1)];
 
-// ========== 进度存档 ==========
+// ========== 读取存档进度 ==========
 let scanDone = getCookie("scanDone") === "1";
 let vulnFind = getCookie("vulnFind") === "1";
 let crackOk = getCookie("crackOk") === "1";
@@ -89,6 +90,7 @@ let loginOk = getCookie("loginOk") === "1";
 let rootOk = getCookie("rootOk") === "1";
 let backdoorOk = getCookie("backdoorOk") === "1";
 
+// 保存进度
 function saveProgress(){
   setCookie("scanDone",scanDone?"1":"0");
   setCookie("vulnFind",vulnFind?"1":"0");
@@ -99,7 +101,7 @@ function saveProgress(){
   log("已保存关卡数据到本地Cookie");
 }
 
-// ========== Help 列表 ==========
+// ========== Help 乱序命令列表 ==========
 const helpMsg = `
 ========== 终端帮助 HELP ==========
 sudo
@@ -132,16 +134,19 @@ function log(txt){
   window.scrollTo(0, document.body.scrollHeight);
 }
 
+// ========== 开局启动界面 ==========
 function start(){
   log("正在启动渗透测试终端...");
   log("加载端口库、漏洞库、爆破模块...");
   log("连接虚拟靶场服务器成功");
+
   let hasSave = getCookie("scanDone") !== "";
   if(hasSave){
     log("已自动加载上次渗透进度，继续游戏");
   }else{
     log("无本地存档，进入全新渗透任务");
   }
+
   log("=============================================");
   log("系统提示：新手请先输入 help 查看所有可用命令");
   log("=============================================\n");
@@ -154,9 +159,8 @@ input.addEventListener('keydown',e=>{
   log(`root@hack:~# ${order}`);
   input.value = '';
 
-  // 新增：help -a 打开网页
+  // help -a 直接打开指定网址，无多余提示
   if(order === "help -a"){
-    log("正在打开高级帮助页面...");
     window.open("https://pc591.github.io/hock/date","_blank");
     return;
   }
@@ -183,7 +187,7 @@ input.addEventListener('keydown',e=>{
     return;
   }
 
-  // 伪装假命令
+  // 伪装无用命令
   const fakeCmd = ["cd","dir","mkdir","rm","mv","pwd","cat","exit","reboot"];
   if(fakeCmd.includes(order)){
     if(order === "cd") log("切换工作目录完成");
@@ -198,7 +202,7 @@ input.addEventListener('keydown',e=>{
     return;
   }
 
-  // 真实渗透命令
+  // 真实渗透命令逻辑
   if(order === 'ping'){
     log(`正在发送数据包探测目标主机...`);
     log(`目标 ${randIP} 在线，网络延迟正常`);
