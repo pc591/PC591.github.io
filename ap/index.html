@@ -1,1 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python编辑器</title>
+    <link rel="icon" href="gjxwe-hym65-001.ico" type="image/x-icon">
+    <style>
+        * {margin: 0; padding: 0; box-sizing: border-box;}
+        body {padding: 10px; font-family: sans-serif; background: #f5f5f5;}
+        h2 {text-align: center; margin-bottom: 10px; color: #333;}
+        .container {max-width: 100%; margin: 0 auto;}
+        textarea {
+            width: 100%;
+            height: 35vh;
+            padding: 10px;
+            font-size: 14px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            resize: none;
+            margin-bottom: 10px;
+        }
+        .btn-group {display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px;}
+        button {
+            flex: 1;
+            min-width: 80px;
+            padding: 10px;
+            border: none;
+            border-radius: 4px;
+            background: #2196F3;
+            color: #fff;
+            font-size: 14px;
+            /* 禁止按钮长按重复触发 */
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        button:active {opacity: 0.8;}
+        button:disabled {background: #90caf9; cursor: not-allowed;}
+        #output {
+            width: 100%;
+            height: 25vh;
+            padding: 10px;
+            background: #111;
+            color: #0f0;
+            border-radius: 4px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>在线Python编辑器</h2>
+        <textarea id="codeEditor" placeholder="在此编写Python代码..."></textarea>
 
+        <div class="btn-group">
+            <button id="runBtn">运行代码</button>
+            <button onclick="saveToCookie()">保存代码(Cookie)</button>
+            <button onclick="loadFromCookie()">读取代码(Cookie)</button>
+            <button onclick="downloadPy()">下载为 .py 文件</button>
+            <button onclick="clearAll()">清空</button>
+        </div>
+
+        <div id="output">运行结果：</div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.27.0/full/pyodide.js"></script>
+    <script>
+        let pyodide = null;
+        let isRunning = false; // 运行锁，防止重复执行
+        const editor = document.getElementById('codeEditor');
+        const output = document.getElementById('output');
+        const runBtn = document.getElementById('runBtn');
+
+        // 初始化环境
+        async function initPyodide() {
+            output.innerText = "正在加载Python环境，请稍等...";
+            pyodide = await loadPyodide();
+            output.innerText = "Python环境加载完成，可以编写代码啦！";
+            loadFromCookie();
+        }
+        initPyodide();
+
+        // 运行代码（加锁防重复执行）
+        async function runCode() {
+            // 正在运行中直接返回
+            if (isRunning || !pyodide) {
+                if (!pyodide) output.innerText = "环境还没加载完，请等待！";
+                return;
+            }
+
+            isRunning = true;
+            runBtn.disabled = true;
+            const code = editor.value;
+            output.innerText = "运行中...\n";
+
+            try {
+                // 修复重复输出问题
+                pyodide.runPython(`
+import sys
+from io import StringIO
+sys.stdout = StringIO()
+`);
+                // 只执行一次用户代码
+                pyodide.runPython(code);
+                const res = pyodide.runPython("sys.stdout.getvalue()");
+                output.innerText = "运行结果：\n" + res;
+            } catch (err) {
+                output.innerText = "代码报错：\n" + err;
+            }
+
+            // 解锁，恢复按钮
+            isRunning = false;
+            runBtn.disabled = false;
+        }
+
+        // 绑定点击事件，替代onclick，屏蔽长按连续触发
+        runBtn.addEventListener('click', runCode);
+        // 阻止长按自动重复点击
+        runBtn.addEventListener('mousedown', e => e.preventDefault());
+
+        // 保存到Cookie
+        function saveToCookie() {
+            const code = editor.value;
+            const days = 30;
+            const date = new Date();
+            date.setTime(date.getTime() + days*24*60*60*1000);
+            document.cookie = `pycode=${encodeURIComponent(code)};expires=${date.toUTCString()};path=/`;
+            alert("代码已保存到本地Cookie！");
+        }
+
+        // 读取Cookie
+        function loadFromCookie() {
+            const cookieArr = document.cookie.split("; ");
+            for(let item of cookieArr) {
+                const [key, val] = item.split("=");
+                if(key === "pycode") {
+                    editor.value = decodeURIComponent(val);
+                    return;
+                }
+            }
+        }
+
+        // 下载py文件
+        function downloadPy() {
+            const code = editor.value;
+            const blob = new Blob([code], {type: "text/plain"});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "code.py";
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // 清空
+        function clearAll() {
+            editor.value = "";
+            output.innerText = "运行结果：";
+        }
+    </script>
+</body>
+</html>
