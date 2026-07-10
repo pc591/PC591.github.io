@@ -1,5 +1,5 @@
 # 超级玛丽Web版（转载）
-<a href="https://pc591.github.io/mario-html5/dist/" target="_blank">https://pc591.github.io/mario-html5/dist/</a>
+<a href="https://pc591.github.io/mali/dist/" target="_blank">https://pc591.github.io/mali/dist/</a>
 
 <br />
 <img src="https://static.webfed.cn/Xnip2020-12-31_22-49-39.jpg">
