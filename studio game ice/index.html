@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<title>冰火娃7 三人版（新朋友窄体型）</title>
+<title>冰火娃7 三人版 2.0</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:#151515;display:flex;flex-direction:column;align-items:center;padding:16px;color:#fff;font-family:Microsoft YaHei}
@@ -13,7 +13,7 @@ canvas{border:3px solid white;background:#263442}
 <body>
 <div class="tip">
 🔵冰娃(WASD) | 🔴火娃(方向键) | ⚫新朋友(G← J→)
-<br>全员跳跃：Y键；<b>新朋友体型更窄，唯一能进入窄通道按下内部按钮！</b>
+<br>全员跳跃：Y键 | R键：重置关卡；<b>新朋友体型更窄，进入窄通道触发按钮！</b>
 </div>
 <canvas id="game" width="960" height="540"></canvas>
 
@@ -21,90 +21,170 @@ canvas{border:3px solid white;background:#263442}
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 const keys = {};
-// ✅【修复按键赋值BUG】
-window.addEventListener("keydown", e => keys[e.key.toLowerCase()] = true);
-window.addEventListener("keyup", e => keys[e.key.toLowerCase()] = false);
 
-//物理参数
+window.addEventListener("keydown", function(e){
+    keys[e.key.toLowerCase()] = true;
+});
+window.addEventListener("keyup", function(e){
+    keys[e.key.toLowerCase()] = false;
+});
+
+//物理常量
 const GRAVITY = 0.55;
 const JUMP_FORCE = -12.5;
 const MOVE_SPEED = 4;
-const BIG_SIZE = 32;    //冰娃、火娃体型（宽32）
-const SMALL_W = 20;     //新朋友宽度（窄！）
+const BIG_SIZE = 32;
+const SMALL_W = 20;
 const SMALL_H = 32;
 
-//三名角色数据
+//玩家数据
 const players = [
-    //0：冰娃 蓝色（大号体型）
     {x: 60, y: 420, vx: 0, vy: 0, color: "#44ccff", w: BIG_SIZE, h: BIG_SIZE, onGround: false},
-    //1：火娃 红色（大号体型）
     {x: 110, y: 420, vx: 0, vy: 0, color: "#ff4444", w: BIG_SIZE, h: BIG_SIZE, onGround: false},
-    //2：新朋友 灰色（窄体型！专门走窄路）
     {x: 160, y: 420, vx: 0, vy: 0, color: "#aaaaaa", w: SMALL_W, h: SMALL_H, onGround: false}
 ];
 
-//平台 [x,y,宽,高]
-const platforms = [
-    [0, 470, 960, 70],
-    [220, 390, 120, 16],
-    [420, 320, 130, 16],
-    [610, 250, 140, 16],
-    [780, 180, 160, 16],
-    //窄通道平台（只有小个子能通行，横向空隙宽度22）
-    [330, 240, 90, 16],
-    [445, 240, 90, 16]
-];
-//窄墙体，制造狭小入口（冰火娃进不去）
-const narrowWall = [
-    [310, 170, 20, 70],
-    [535, 170, 20, 70]
-];
+let currentStage = 1; //当前关卡
 
-//水域
-const waterBlue = [[180, 454, 65, 16]]; //冰娃安全
-const waterRed = [[500, 454, 65, 16]];  //火娃安全
-//尖刺
-const spikes = [[660, 452, 45, 18]];
+//===============关卡数据配置===============
+const stages = {
+    1: {
+        spawn: [60, 420, 110, 420, 160, 420],
+        platforms: [
+            [0, 470, 960, 70],
+            [220, 390, 120, 16],
+            [420, 320, 130, 16],
+            [610, 250, 140, 16],
+            [780, 180, 160, 16],
+            [330, 240, 90, 16],
+            [445, 240, 90, 16]
+        ],
+        narrowWall: [
+            [310, 170, 20, 70],
+            [535, 170, 20, 70]
+        ],
+        waterBlue: [[180, 454, 65, 16]],
+        waterRed: [[500, 454, 65, 16]],
+        spikes: [[660, 452, 45, 18]],
+        movingPlat: [],
+        buttons: [
+            {x: 385, y:212, w:26, h:12, pressed:false, targetDoor:0}
+        ],
+        doors: [
+            {x:730, y:110, w:16, h:70, open:false}
+        ],
+        goal: [830,145,55,35]
+    },
+    2:{
+        spawn:[60,420,100,420,140,420],
+        platforms:[
+            [0,470,960,70],
+            [120,370,100,16],
+            [300,300,110,16],
+            [500,350,120,16],
+            [700,280,130,16],
+            [260,200,80,16],
+            [370,200,80,16]
+        ],
+        narrowWall:[
+            [240,130,20,70],
+            [430,130,20,70]
+        ],
+        waterBlue:[[400,454,70,16]],
+        waterRed:[[620,454,70,16]],
+        spikes:[[200,452,40,18],[550,452,40,18]],
+        movingPlat:[
+            {x:420,y:260,w:80,h:16,minX:420,maxX:560,speed:1.2,dir:1}
+        ],
+        buttons:[
+            {x:300,y:172,w:26,h:12,pressed:false,targetDoor:0},
+            {x:720,y:242,w:26,h:12,pressed:false,targetDoor:1}
+        ],
+        doors:[
+            {x:580,y:150,w:16,h:60,open:false},
+            {x:820,y:180,w:16,h:60,open:false}
+        ],
+        goal:[860,135,50,35]
+    },
+    3:{
+        spawn:[50,420,90,420,130,420],
+        platforms:[
+            [0,470,960,70],
+            [150,360,90,16],
+            [320,290,100,16],
+            [480,220,90,16],
+            [640,300,110,16],
+            [780,230,120,16],
+            [410,140,70,16],
+            [500,140,70,16]
+        ],
+        narrowWall:[
+            [390,70,20,70],
+            [570,70,20,70]
+        ],
+        waterBlue:[[280,454,65,16],[740,454,60,16]],
+        waterRed:[[520,454,65,16]],
+        spikes:[[360,452,45,18],[660,452,45,18]],
+        movingPlat:[
+            {x:340,y:210,w:75,h:16,minX:340,maxX:460,speed:1.4,dir:1},
+            {x:600,y:160,w:75,h:16,minX:600,maxX:730,speed:1,dir:-1}
+        ],
+        buttons:[
+            {x:435,y:112,w:26,h:12,pressed:false,targetDoor:0},
+            {x:660,y:262,w:26,h:12,pressed:false,targetDoor:1},
+            {x:800,y:192,w:26,h:12,pressed:false,targetDoor:2}
+        ],
+        doors:[
+            {x:450,y:80,w:16,h:60,open:false},
+            {x:620,y:110,w:16,h:60,open:false},
+            {x:880,y:140,w:16,h:60,open:false}
+        ],
+        goal:[900,95,50,35]
+    }
+};
 
-//按钮（位于窄通道内部！只有新朋友可以触碰）
-const buttons = [
-    {x: 385, y:212, w:26, h:12, pressed:false}
-];
-//铁门：按钮按下开启
-const door = {x:730, y:110, w:16, h:70, open:false};
-//终点区域
-const goal = [830,145,55,35];
+let stageData = null;
 
-//碰撞工具
+//加载关卡
+function loadStage(num){
+    currentStage = num;
+    stageData = JSON.parse(JSON.stringify(stages[num]));
+    const s = stageData;
+    players[0].x = s.spawn[0]; players[0].y = s.spawn[1]; players[0].vx=0;players[0].vy=0;
+    players[1].x = s.spawn[2]; players[1].y = s.spawn[3]; players[1].vx=0;players[1].vy=0;
+    players[2].x = s.spawn[4]; players[2].y = s.spawn[5]; players[2].vx=0;players[2].vy=0;
+}
+
+//矩形碰撞
 function rectCollide(actor, block){
     const ax = actor.x, ay = actor.y, aw = actor.w, ah = actor.h;
-    const bx = block[0], by = block[1], bw = block[2], bh = block[3];
+    const bx = block[0]??block.x, by = block[1]??block.y, bw = block[2]??block.w, bh = block[3]??block.h;
     return ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
 }
 
-//角色重生
+//全体重生
 function respawnAll(){
-    players[0].x=60;players[0].y=420;players[0].vx=0;players[0].vy=0;
-    players[1].x=110;players[1].y=420;players[1].vx=0;players[1].vy=0;
-    players[2].x=160;players[2].y=420;players[2].vx=0;players[2].vy=0;
-    buttons[0].pressed = false;
-    door.open = false;
+    loadStage(currentStage);
 }
 
+//玩家物理更新
 function updatePlayer(p, ctrlLeft, ctrlRight){
     p.vx = 0;
     if(keys[ctrlLeft]) p.vx = -MOVE_SPEED;
     if(keys[ctrlRight]) p.vx = MOVE_SPEED;
 
-    //跳跃 Y键
     if(keys["y"] && p.onGround){
         p.vy = JUMP_FORCE;
     }
     p.vy += GRAVITY;
 
-    //水平移动+碰撞
+    //水平移动
     p.x += p.vx;
-    const allObstacle = [...platforms, ...narrowWall];
+    const allObstacle = [...stageData.platforms, ...stageData.narrowWall];
+    //加入关闭的门作为障碍
+    for(let d of stageData.doors){
+        if(!d.open) allObstacle.push([d.x,d.y,d.w,d.h]);
+    }
     for(let plat of allObstacle){
         if(rectCollide(p, plat)){
             if(p.vx > 0) p.x = plat[0] - p.w;
@@ -112,10 +192,11 @@ function updatePlayer(p, ctrlLeft, ctrlRight){
         }
     }
 
-    //垂直移动+地面判定
+    //垂直移动
     p.y += p.vy;
     p.onGround = false;
-    for(let plat of platforms){
+    //固定平台碰撞
+    for(let plat of stageData.platforms){
         if(rectCollide(p, plat)){
             if(p.vy > 0){
                 p.y = plat[1] - p.h;
@@ -126,89 +207,131 @@ function updatePlayer(p, ctrlLeft, ctrlRight){
             p.vy = 0;
         }
     }
-
-    //铁门碰撞（未开启阻挡通行）
-    if(!door.open && rectCollide(p,[door.x,door.y,door.w,door.h])){
-        if(p.vx>0) p.x = door.x - p.w;
-        if(p.vx<0) p.x = door.x + door.w;
+    //移动平台碰撞
+    for(let mp of stageData.movingPlat){
+        if(rectCollide(p, mp)){
+            if(p.vy>0){
+                p.y = mp.y - p.h;
+                p.onGround = true;
+                p.x += mp.speed * mp.dir; //跟着平台移动
+            }
+            p.vy=0;
+        }
     }
 
-    //掉落虚空检测
+    //掉落虚空
     if(p.y > 560) respawnAll();
 }
 
+//更新移动平台位置
+function updateMovingPlatform(){
+    for(let mp of stageData.movingPlat){
+        mp.x += mp.speed * mp.dir;
+        if(mp.x <= mp.minX) mp.dir = 1;
+        if(mp.x >= mp.maxX) mp.dir = -1;
+    }
+}
+
+//危险检测、按钮、通关逻辑
 function checkDanger(){
     const p1 = players[0];
     const p2 = players[1];
     const p3 = players[2];
-    //水域判定
-    for(let w of waterBlue){
+
+    //水域伤害
+    for(let w of stageData.waterBlue){
         if(rectCollide(p2,w)||rectCollide(p3,w)) respawnAll();
     }
-    for(let w of waterRed){
+    for(let w of stageData.waterRed){
         if(rectCollide(p1,w)||rectCollide(p3,w)) respawnAll();
     }
-    //尖刺
-    for(let s of spikes){
+    //尖刺伤害
+    for(let s of stageData.spikes){
         if(rectCollide(p1,s)||rectCollide(p2,s)||rectCollide(p3,s)) respawnAll();
     }
 
-    //按钮检测（仅小个子能够走到里面触发）
-    const btn = buttons[0];
-    if(rectCollide(players[2],[btn.x,btn.y,btn.w,btn.h])){
-        btn.pressed = true;
-        door.open = true;
+    //按钮触发（只有新朋友可以踩按钮）
+    for(let btn of stageData.buttons){
+        if(rectCollide(p3,[btn.x,btn.y,btn.w,btn.h])){
+            btn.pressed = true;
+            stageData.doors[btn.targetDoor].open = true;
+        }
     }
 
-    //通关判定：三个人全部抵达终点
-    let p1goal = rectCollide(p1, goal);
-    let p2goal = rectCollide(p2, goal);
-    let p3goal = rectCollide(p3, goal);
-    if(p1goal && p2goal && p3goal){
-        alert("🎉全部角色到达终点，通关成功！");
+    //通关判断
+    let g1 = rectCollide(p1, stageData.goal);
+    let g2 = rectCollide(p2, stageData.goal);
+    let g3 = rectCollide(p3, stageData.goal);
+    if(g1 && g2 && g3){
+        if(currentStage < 3){
+            alert(`第${currentStage}关通关！即将进入下一关`);
+            loadStage(currentStage+1);
+        }else{
+            alert("🎉恭喜！全部三关通关完成！");
+            loadStage(1);
+        }
+    }
+
+    //R键重置关卡
+    if(keys["r"]){
         respawnAll();
+        keys["r"] = false;
     }
 }
 
+//渲染画面
 function render(){
     ctx.clearRect(0,0,canvas.width,canvas.height);
-    //绘制平台
+    const s = stageData;
+
+    ctx.fillStyle="#fff";
+    ctx.font="20px Arial";
+    ctx.fillText(`关卡：${currentStage}/3`,20,30);
+
+    //固定平台
     ctx.fillStyle="#556677";
-    platforms.forEach(p=>{ctx.fillRect(p[0],p[1],p[2],p[3])})
+    s.platforms.forEach(p=>ctx.fillRect(p[0],p[1],p[2],p[3]));
     //窄墙体
     ctx.fillStyle="#334455";
-    narrowWall.forEach(w=>ctx.fillRect(w[0],w[1],w[2],w[3]))
+    s.narrowWall.forEach(w=>ctx.fillRect(w[0],w[1],w[2],w[3]));
+
+    //移动平台
+    ctx.fillStyle="#778899";
+    s.movingPlat.forEach(mp=>ctx.fillRect(mp.x,mp.y,mp.w,mp.h));
 
     //水域
     ctx.fillStyle="#33aaff";
-    waterBlue.forEach(w=>ctx.fillRect(w[0],w[1],w[2],w[3]))
+    s.waterBlue.forEach(w=>ctx.fillRect(w[0],w[1],w[2],w[3]));
     ctx.fillStyle="#ff3333";
-    waterRed.forEach(w=>ctx.fillRect(w[0],w[1],w[2],w[3]))
+    s.waterRed.forEach(w=>ctx.fillRect(w[0],w[1],w[2],w[3]));
 
     //尖刺
     ctx.fillStyle="#dddddd";
-    spikes.forEach(s=>{
+    s.spikes.forEach(sp=>{
         ctx.beginPath();
-        ctx.moveTo(s[0],s[1]+s[3]);
-        ctx.lineTo(s[0]+s[2]/2,s[1]);
-        ctx.lineTo(s[0]+s[2],s[1]+s[3]);
+        ctx.moveTo(sp[0],sp[1]+sp[3]);
+        ctx.lineTo(sp[0]+sp[2]/2,sp[1]);
+        ctx.lineTo(sp[0]+sp[2],sp[1]+sp[3]);
         ctx.fill();
-    })
+    });
 
     //按钮
-    const btn = buttons[0];
-    ctx.fillStyle = btn.pressed ? "#44dd44":"#dd4444";
-    ctx.fillRect(btn.x,btn.y,btn.w,btn.h);
+    for(let btn of s.buttons){
+        ctx.fillStyle = btn.pressed ? "#44dd44":"#dd4444";
+        ctx.fillRect(btn.x,btn.y,btn.w,btn.h);
+    }
 
     //铁门
-    ctx.fillStyle = door.open ? "#222222":"#885533";
-    ctx.fillRect(door.x,door.y,door.w,door.h);
+    for(let d of s.doors){
+        ctx.fillStyle = d.open ? "#222222":"#885533";
+        ctx.fillRect(d.x,d.y,d.w,d.h);
+    }
 
-    //终点区域
+    //终点
     ctx.fillStyle="#ffdd22";
-    ctx.fillRect(goal[0],goal[1],goal[2],goal[3]);
+    ctx.fillRect(s.goal[0],s.goal[1],s.goal[2],s.goal[3]);
 
-    //绘制三名角色
+    //绘制角色
     players.forEach(p=>{
         ctx.fillStyle=p.color;
         ctx.fillRect(p.x,p.y,p.w,p.h);
@@ -217,16 +340,19 @@ function render(){
     })
 }
 
-function loop(){
-    //更新各个角色控制
-    updatePlayer(players[0], "a", "d"); //冰娃 A D
-    updatePlayer(players[1], "arrowleft", "arrowright"); //火娃 ←→
-    updatePlayer(players[2], "g", "j"); //新朋友 G J
+function gameLoop(){
+    updateMovingPlatform();
+    updatePlayer(players[0], "a", "d");
+    updatePlayer(players[1], "arrowleft", "arrowright");
+    updatePlayer(players[2], "g", "j");
     checkDanger();
     render();
-    requestAnimationFrame(loop);
+    requestAnimationFrame(gameLoop);
 }
-loop();
+
+//启动游戏，加载第一关
+loadStage(1);
+gameLoop();
 </script>
 </body>
 </html>
